@@ -1,0 +1,38 @@
+# 1. ADD KUBERNETES APT KEY
+- name: Add Kubernetes apt key
+  shell: |
+    curl -fsSL https://pkgs.k8s.io/core:/stable:/v1.29/deb/Release.key \
+      | gpg --dearmor -o /etc/apt/keyrings/kubernetes-apt-keyring.gpg
+  args:
+    creates: /etc/apt/keyrings/kubernetes-apt-keyring.gpg
+
+# 2. ADD KUBERNETES APT REPOSITORY
+- name: Add Kubernetes apt repository
+  apt_repository:
+    repo: "deb [signed-by=/etc/apt/keyrings/kubernetes-apt-keyring.gpg] https://pkgs.k8s.io/core:/stable:/v1.29/deb/ /"
+    filename: kubernetes
+    state: present
+    update_cache: true
+
+# 3. INSTALL KUBELET, KUBEADM, KUBECTL
+- name: Install Kubernetes components
+  apt:
+    name: [kubelet, kubeadm, kubectl]
+    update_cache: true
+    state: present
+
+# 4. HOLD PACKAGES
+- name: Hold Kubernetes packages
+  dpkg_selections:
+    name: "{{ item }}"
+    selection: hold
+  loop:
+    - kubelet
+    - kubeadm
+    - kubectl
+
+# 5. ENABLE KUBELET
+- name: Enable kubelet
+  systemd:
+    name: kubelet
+    enabled: true

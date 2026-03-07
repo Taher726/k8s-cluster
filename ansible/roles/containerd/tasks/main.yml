@@ -1,0 +1,46 @@
+# 1. CREATE KEYRINGS DIRECTORY
+- name: Create keyrings directory
+  file:
+    path: /etc/apt/keyrings
+    state: directory
+    owner: vagrant
+    group: vagrant
+    mode: "0755"
+
+# 2. INSTALL containerd
+- name: Install containerd
+  apt:
+    name: containerd
+    state: present
+    update_cache: true
+
+# 3. CREATE CONFIG DIRECTORY
+- name: Create /etc/containerd directory
+  file:
+    path: /etc/containerd
+    state: directory
+    owner: vagrant
+    group: vagrant
+    mode: "0755"
+
+# 4. GENERATE containerd DEFAULT CONFIG
+- name: Generate containerd default config
+  shell: containerd config default > /etc/containerd/config.toml
+  args:
+    creates: /etc/containerd/config.toml
+  notify: Restart containerd
+
+# 5. ENABLE containerd TO USE SYSTEMD CGROUP
+- name: Enable containerd to use systemd cgroup
+  replace:
+    path: /etc/containerd/config.toml
+    regexp: 'SystemdCgroup\s*=\s*false'
+    replace: 'SystemdCgroup = true'
+  notify: Restart containerd
+
+# 6. ENABLE AND START containerd
+- name: Enable and start containerd
+  systemd:
+    name: containerd
+    enabled: true
+    state: restarted

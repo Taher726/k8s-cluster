@@ -1,0 +1,43 @@
+Vagrant.configure("2") do |config|
+  config.vm.box = "ubuntu/bionic64"
+
+  nodes = [
+    { name: "k8s-master", ip: "192.168.56.30" },
+    { name: "k8s-worker-1", ip: "192.168.56.31" },
+    { name: "k8s-worker-2", ip: "192.168.56.32" },
+  ]
+
+  nodes.each do |node|
+    config.vm.define node[:name] do |node_config|
+      node_config.vm.hostname = node[:name]
+      node_config.vm.network :private_network, ip:node[:ip]
+
+      node_config.vm.provider "virtualbox" do |vb|
+        vb.memory = "2048"
+        vb.cpus = 2
+        vb.name = node[:name]
+      end
+
+      node_config.vm.provision "shell", inline: <<-SHELL
+        mkdir -p /home/vagrant/keys
+        cp /vagrant/.vagrant/machines/k8s-master/virtualbox/private_key /home/vagrant/keys/k8s-master_key 2>/dev/null || true
+        cp /vagrant/.vagrant/machines/k8s-worker-1/virtualbox/private_key /home/vagrant/keys/k8s-worker-1_key 2>/dev/null || true
+        cp /vagrant/.vagrant/machines/k8s-worker-2/virtualbox/private_key /home/vagrant/keys/k8s-worker-2_key 2>/dev/null || true
+        chmod 600 /home/vagrant/keys/* 2>/dev/null || true
+        chown vagrant:vagrant /home/vagrant/keys/* 2>/dev/null || true
+      SHELL
+
+      #Run Ansible only if the last node is up
+      if node[:name] == "k8s-worker-2"
+        node_config.vm.provision "ansible_local" do |ansible|
+          ansible.playbook = "ansible/playbooks/main.yml"
+          ansible.inventory_path = "ansible/inventory/hosts.ini"
+          ansible.config_file = "ansible/ansible.cfg"
+          ansible.limit = "all"
+          ansible.verbose = "v"
+          ansible.compatibility_mode = "2.0"
+        end
+      end
+    end
+  end
+end
