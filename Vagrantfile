@@ -5,6 +5,7 @@ Vagrant.configure("2") do |config|
     { name: "k8s-master", ip: "192.168.56.30" },
     { name: "k8s-worker-1", ip: "192.168.56.31" },
     { name: "k8s-worker-2", ip: "192.168.56.32" },
+    { name: "vm-tools", ip: "192.168.56.33" },
   ]
 
   nodes.each do |node|
@@ -23,12 +24,13 @@ Vagrant.configure("2") do |config|
         cp /vagrant/.vagrant/machines/k8s-master/virtualbox/private_key /home/vagrant/keys/k8s-master_key 2>/dev/null || true
         cp /vagrant/.vagrant/machines/k8s-worker-1/virtualbox/private_key /home/vagrant/keys/k8s-worker-1_key 2>/dev/null || true
         cp /vagrant/.vagrant/machines/k8s-worker-2/virtualbox/private_key /home/vagrant/keys/k8s-worker-2_key 2>/dev/null || true
+        cp /vagrant/.vagrant/machines/vm-tools/virtualbox/private_key /home/vagrant/keys/vm-tools_key 2>/dev/null || true
         chmod 600 /home/vagrant/keys/* 2>/dev/null || true
         chown vagrant:vagrant /home/vagrant/keys/* 2>/dev/null || true
       SHELL
 
-      #Run Ansible only if the last node is up
-      if node[:name] == "k8s-worker-2"
+      # Run Ansible only if the last node is up
+      if node[:name] == "vm-tools"
         node_config.vm.provision "ansible_local" do |ansible|
           ansible.playbook = "ansible/playbooks/main.yml"
           ansible.inventory_path = "ansible/inventory/hosts.ini"

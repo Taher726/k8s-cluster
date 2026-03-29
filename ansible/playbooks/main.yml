@@ -49,3 +49,10 @@
           - nodes_status.stdout | regex_search('k8s-master\s+Ready')
         success_msg: "Cluster is healthy"
         fail_msg: "Cluster failed"
+
+- name: Setup VM Tools
+  hosts: tools
+  become: true
+  gather_facts: true
+  roles:
+    - role: docker

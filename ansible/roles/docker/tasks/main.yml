@@ -1,0 +1,80 @@
+# 1. Update cache
+- name: Update apt cache
+  apt:
+    update_cache: yes
+
+# 2. Install required packages for Docker
+- name: Install required packages
+  apt:
+    name: 
+      - bc
+      - curl
+      - expect
+      - git
+      - ca-certificates
+    state: present
+
+# 3. Create Docker Group and assign the vagrant user
+- name: Create docker group
+  group:
+    name: docker
+    state: present
+
+- name: Add vagrant user to docker group
+  user:
+    name: vagrant
+    groups: docker
+    append: true
+
+# 4. Create Docker GPG key directory
+- name: Create Docker GPG Key directory
+  file:
+    path: /etc/apt/keyrings
+    state: directory
+    mode: "0755"
+
+# 5. Download Docker official GPG key
+- name: Downlaod Docker official GPG key
+  get_url:
+    url: https://download.docker.com/linux/ubuntu/gpg
+    dest: /etc/apt/keyrings/docker.asc
+    mode: "0644"
+
+# 6. Add Docker to APT sources
+- name: Add Docker to APT sources
+  apt_repository:
+    repo: >
+        deb [arch={{ ansible_architecture | replace('x86_64', 'amd64') }}
+        signed-by=/etc/apt/keyrings/docker.asc]
+        https://download.docker.com/linux/ubuntu
+        {{ ansible_lsb.codename }} stable
+    state: present
+    filename: docker
+
+# 7. Update APT cache 
+- name: Update APT cache after adding Docker
+  apt:
+    update_cache: yes
+
+# 8. Install Docker and Docker Compose package
+- name: Install Docker and Docker Compose
+  apt:
+    name:
+      - docker-ce
+      - docker-ce-cli
+      - docker-buildx-plugin
+      - docker-compose-plugin
+    state: present
+
+# 9. Verify Docker service
+- name: Ensure Docker service is enabled and started
+  service:
+    name: docker
+    state: started
+    enabled: yes
+
+# 10. Show Docker compose version
+- name: Verify Docker Compose version
+  command: docker compose version
+  register: compose_version
+  changed_when: false
