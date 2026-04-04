@@ -1,0 +1,36 @@
+# 1. Install NFS
+- name: Install NFS
+  apt:
+    name: 
+      - nfs-kernel-server
+    state: present
+    update_cache: true
+
+# 2. Create Shared directory
+- name: Create Shared directory
+  file:
+    path: /srv/nfs/k8s
+    state: directory
+    owner: nobody
+    group: nogroup
+    mode: "0755"
+
+# 3. Configure exports
+- name: Configure exports
+  lineinfile:
+    path: /etc/exports
+    line: /srv/nfs/k8s 192.168.56.0/24(rw,sync,no_subtree_check,no_root_squash)
+    create: true
+    state: present
+
+# 4. Apply exports
+- name: Apply Exports
+  command: exportfs -ra
+  notify: restart nfs
+
+# 5. Enable and restart NFS
+- name: Enable NFS service
+  systemd:
+    name: nfs-kernel-server
+    enabled: yes
+  notify: restart nfs
