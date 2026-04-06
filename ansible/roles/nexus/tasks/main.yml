@@ -1,0 +1,122 @@
+# 1. Install Java 11
+- name: Install Java 11 runtime
+  apt:
+    name: openjdk-11-jre-headless
+    state: present
+    update_cache: true
+
+# 2. Download Nexus package into /opt
+- name: Ensure /opt exists
+  file:
+    path: /opt
+    state: directory
+    mode: "0755"
+
+- name: Download Nexus package to /opt
+  get_url:
+    url: "{{ nexus_download_url }}"
+    dest: "/opt/{{ nexus_package }}"
+    mode: "0644"
+
+# 3. Extract Nexus archive in /opt
+- name: Extract Nexus archive in /opt
+  unarchive:
+    src: "/opt/{{ nexus_package }}"
+    dest: /opt
+    remote_src: true
+    creates: "/opt/nexus-{{ nexus_version }}"
+
+# 4. Move /opt/nexus-<version> to /opt/nexus
+- name: Check if /opt/nexus exists
+  stat:
+    path: /opt/nexus
+  register: nexus_dir
+
+- name: Move extracted Nexus directory to /opt/nexus
+  command: mv "/opt/nexus-{{ nexus_version }}" /opt/nexus
+  when: not nexus_dir.stat.exists
+
+# 5. Create nexus user
+- name: Ensure nexus group exists
+  group:
+    name: "{{ nexus_group }}"
+    state: present
+
+- name: Ensure nexus user exists
+  user:
+    name: "{{ nexus_user }}"
+    group: "{{ nexus_group }}"
+    create_home: true
+    shell: /bin/bash
+    state: present
+
+# 6. Set ownership for nexus and sonatype-work
+- name: Ensure sonatype-work directory exists
+  file:
+    path: "{{ nexus_working_dir }}"
+    state: directory
+    mode: "0755"
+
+- name: Set ownership on /opt/nexus
+  file:
+    path: /opt/nexus
+    state: directory
+    owner: "{{ nexus_user }}"
+    group: "{{ nexus_group }}"
+    recurse: true
+
+- name: Set ownership on sonatype-work
+  file:
+    path: "{{ nexus_working_dir }}"
+    state: directory
+    owner: "{{ nexus_user }}"
+    group: "{{ nexus_group }}"
+    recurse: true
+
+# 7. Set run_as_user in nexus.rc
+- name: Configure Nexus run user
+  lineinfile:
+    path: /opt/nexus/bin/nexus.rc
+    regexp: '^#?run_as_user=.*'
+    line: 'run_as_user="{{ nexus_user }}"'
+
+# 8. Set Xms/Xmx in nexus.vmoptions
+- name: Set Nexus minimum heap size
+  lineinfile:
+    path: /opt/nexus/bin/nexus.vmoptions
+    regexp: '^-Xms'
+    line: '-Xms768m'
+
+- name: Set Nexus maximum heap size
+  lineinfile:
+    path: /opt/nexus/bin/nexus.vmoptions
+    regexp: '^-Xmx'
+    line: '-Xmx768m'
+
+# 9. Remove endorsed dirs option
+- name: Remove deprecated endorsed dirs option
+  lineinfile:
+    path: /opt/nexus/bin/nexus.vmoptions
+    regexp: '^-Djava\.endorsed\.dirs=lib/endorsed'
+    state: absent
+
+- name: Set Nexus data path to sonatype-work
+  lineinfile:
+    path: /opt/nexus/bin/nexus.vmoptions
+    regexp: '^-Dkaraf\.data='
+    line: '-Dkaraf.data=/opt/sonatype-work/nexus3'
+
+# 10. Start Nexus using shell command
+- name: Start Nexus
+  command: sh /opt/nexus/bin/nexus start
+  become_user: "{{ nexus_user }}"
+  args:
+    creates: /opt/sonatype-work/nexus3/nexus.pid
+
+- name: Wait for Nexus HTTP port
+  wait_for:
+    host: "127.0.0.1"
+    port: "{{ nexus_port }}"
+    delay: 10
+    timeout: 300
+    state: started

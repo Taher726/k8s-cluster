@@ -57,3 +57,4 @@
   roles:
     - role: docker
     - role: nfs
+    - role: nexus

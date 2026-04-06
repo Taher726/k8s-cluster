@@ -1,0 +1,11 @@
+nexus_version: "3.70.2-01"
+nexus_package: "nexus-{{ nexus_version }}-unix.tar.gz"
+nexus_download_url: "https://download.sonatype.com/nexus/3/{{ nexus_package }}"
+
+nexus_installation_dir: /opt
+nexus_download_dir: /opt
+nexus_working_dir: /opt/sonatype-work
+
+nexus_user: nexus
+nexus_group: nexus
+nexus_port: 8081
