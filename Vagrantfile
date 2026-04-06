@@ -13,6 +13,10 @@ Vagrant.configure("2") do |config|
       node_config.vm.hostname = node[:name]
       node_config.vm.network :private_network, ip:node[:ip]
 
+      if node[:name] == "vm-tools"
+        node_config.vm.network "forwarded_port", guest: 8081, host: 8081, auto_correct: true
+      end
+
       node_config.vm.provider "virtualbox" do |vb|
         vb.memory = "2048"
         vb.cpus = 2
@@ -35,7 +39,7 @@ Vagrant.configure("2") do |config|
           ansible.playbook = "ansible/playbooks/main.yml"
           ansible.inventory_path = "ansible/inventory/hosts.ini"
           ansible.config_file = "ansible/ansible.cfg"
-          ansible.limit = "all"
+          ansible.limit = "tools"
           ansible.verbose = "v"
           ansible.compatibility_mode = "2.0"
         end
