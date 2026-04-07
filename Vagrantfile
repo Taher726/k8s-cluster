@@ -33,14 +33,26 @@ Vagrant.configure("2") do |config|
         chown vagrant:vagrant /home/vagrant/keys/* 2>/dev/null || true
       SHELL
 
-      # Run Ansible only if the last node is up
+      # Triggers when k8s-worker-2 is up = all K8s nodes exist
+      if node[:name] == "k8s-worker-2"
+        node_config.vm.provision "ansible_local" do |ansible|
+          ansible.playbook       = "ansible/playbooks/k8s.yml"
+          ansible.inventory_path = "ansible/inventory/hosts.ini"
+          ansible.config_file    = "ansible/ansible.cfg"
+          ansible.limit          = "all"
+          ansible.verbose        = "v"
+          ansible.compatibility_mode = "2.0"
+        end
+      end
+
+      # Triggers when vm-tools is up = independent from K8s
       if node[:name] == "vm-tools"
         node_config.vm.provision "ansible_local" do |ansible|
-          ansible.playbook = "ansible/playbooks/main.yml"
+          ansible.playbook       = "ansible/playbooks/vm-tools.yml"
           ansible.inventory_path = "ansible/inventory/hosts.ini"
-          ansible.config_file = "ansible/ansible.cfg"
-          ansible.limit = "tools"
-          ansible.verbose = "v"
+          ansible.config_file    = "ansible/ansible.cfg"
+          ansible.limit          = "all"
+          ansible.verbose        = "v"
           ansible.compatibility_mode = "2.0"
         end
       end

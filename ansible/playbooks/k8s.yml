@@ -1,27 +1,25 @@
-- name: Command setup for all nodes
+- name: Common setup for all nodes
   hosts: k8s_cluster
   become: true
-  gather_facts: true
   roles:
-    - role: common
-    - role: containerd
-    - role: k8s
+    - common
+    - containerd
+    - k8s
 
-- name: Initialize k8s master (control plane)
+- name: Initialize k8s master
   hosts: master
   become: true
-  gather_facts: true
   roles:
-    - role: master
+    - master
 
-- name: Join worker nodes to the cluster
+- name: Join worker nodes
   hosts: workers
   become: true
   gather_facts: false
   roles:
-    - role: workers
+    - workers
 
-- name: Verify Cluster health
+- name: Verify cluster health
   hosts: master
   become: false
   gather_facts: false
@@ -40,22 +38,12 @@
     - name: Print final node status
       debug:
         msg: "{{ nodes_status.stdout_lines }}"
-    
-    - name: Confirm all workers have joined
+
+    - name: Confirm all nodes are Ready
       assert:
         that:
           - "nodes_status.stdout | regex_search('k8s-worker-1\\s+Ready')"
           - "nodes_status.stdout | regex_search('k8s-worker-2\\s+Ready')"
-          - nodes_status.stdout | regex_search('k8s-master\s+Ready')
+          - "nodes_status.stdout | regex_search('k8s-master\\s+Ready')"
         success_msg: "Cluster is healthy"
         fail_msg: "Cluster failed"
-
-- name: Setup VM Tools
-  hosts: tools
-  become: true
-  gather_facts: true
-  roles:
-    - role: docker
-    - role: nfs
-    - role: nexus
-    - role: gitea
