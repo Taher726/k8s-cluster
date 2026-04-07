@@ -1,0 +1,86 @@
+# 1. Create Gitea user
+- name: Create Gitea user
+  user:
+    name: "{{ gitea_user }}"
+    home: "{{ gitea_home }}"
+    shell: /bin/bash
+    system: yes
+    create_home: yes
+
+# 2. Create Gitea repositories
+- name: Create Gitea repositories
+  file:
+    path: "{{ item }}"
+    state: directory
+    owner: "{{ gitea_user }}"
+    group: "{{ gitea_user }}"
+    mode: "0755"
+  loop:
+    - "{{ gitea_home }}/gitea"
+    - "{{ gitea_home }}/gitea/data"
+    - "{{ gitea_home }}/gitea/log"
+    - "{{ gitea_home }}/gitea/repos"
+    - /etc/gitea
+
+# 3. Download Gitea Binary
+- name: Download Gitea Binary
+  get_url:
+    url: "https://github.com/go-gitea/gitea/releases/download/v{{ gitea_version }}/gitea-{{ gitea_version }}-linux-amd64"
+    dest: "/usr/local/bin/gitea"
+    mode: "0755"
+  notify: restart gitea
+
+# 4. Deploy app.ini configuration
+- name: Deploy app.ini configuration
+  template:
+    src: app.ini.j2
+    dest: "/etc/gitea/app.ini"
+    owner: "{{ gitea_user }}"
+    group: "{{ gitea_user }}"
+    mode: "0644"
+
+# 5. Create gitea systemd service
+- name: Create gitea systemd service
+  template:
+    src: gitea.service.j2
+    dest: "/etc/systemd/system/gitea.service"
+    mode: "0644" # r -> 4, w -> 2, and x -> 1 (o:r+w,g:r,o:r)
+  notify:
+    - daemon reload
+    - restart gitea
+
+# 6. Enable and start Gitea
+- name: Enable and start gitea
+  systemd:
+    name: gitea
+    enabled: yes
+    state: started
+
+# 7. Wait for gitea web port
+- name: Wait for gitea web port
+  wait_for:
+    host: "127.0.0.1"
+    port: "{{ gitea_http_port }}"
+    delay: 5
+    timeout: 60
+
+# 8. Create Gitea admin user
+- name: Create Gitea admin user
+  command: >
+    /usr/local/bin/gitea admin user create
+    --username "{{ gitea_admin_user }}"
+    --password "{{ gitea_admin_password }}"
+    --email "{{ gitea_admin_email }}"
+    --admin
+    --must-change-password=false
+    --config /etc/gitea/app.ini
+  become: true
+  become_user: "{{ gitea_user }}"
+  environment:
+    GITEA_WORK_DIR: "{{ gitea_home }}/gitea"
+    HOME: "{{ gitea_home }}"
+  register: create_admin
+  failed_when:
+    - create_admin.rc != 0
+    - '"already exists" not in create_admin.stderr'
+  changed_when: '"already exists" not in create_admin.stderr'

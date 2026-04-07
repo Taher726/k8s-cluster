@@ -1,0 +1,35 @@
+APP_NAME = {{ gitea_app_name }}
+RUN_USER = {{ gitea_user }}
+RUN_MODE = prod
+
+[database]
+DB_TYPE = {{ gitea_db_type }}
+PATH = {{ gitea_db_path }}
+
+[server]
+DOMAIN = {{ gitea_domain }}
+HTTP_PORT = {{ gitea_http_port }}
+ROOT_URL = http://{{ gitea_domain }}:{{ gitea_http_port }}/
+SSH_PORT = {{ gitea_ssh_port }}
+SSH_LISTEN_PORT = {{ gitea_ssh_port }}
+DISABLE_SSH = false
+START_SSH_SERVER = true
+
+[repository]
+ROOT = {{ gitea_home }}/gitea/repos
+
+[security]
+INSTALL_LOCK = true
+
+[log]
+ROOT_PATH = {{ gitea_home }}/gitea/log
+MODE = file
+LEVEL = info
+
+[service]
+DISABLE_REGISTRATION = false
+REQUIRE_SIGNIN_VIEW = false
+
+[webhook]
+ALLOWED_HOST_LIST = *
+DELIVER_TIMEOUT = 30
