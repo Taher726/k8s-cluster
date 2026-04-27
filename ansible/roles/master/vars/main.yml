@@ -3,3 +3,5 @@ pod_network_cidr: "10.244.0.0/16"
 
 # Master node IP
 ip_master: "192.168.56.30"
+
+node_interface: "enp0s8"
