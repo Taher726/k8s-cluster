@@ -1,0 +1,85 @@
+# 1. Add Jenkins Helm repo
+- name: Add Jenkins Helm repo
+  command: helm repo add jenkins https://charts.jenkins.io
+  environment:
+    KUBECONFIG: /home/vagrant/.kube/config
+  changed_when: false
+
+# 2. Update Helm repo
+- name: Update Helm repo
+  command: helm repo update 
+  environment:
+    KUBECONFIG: /home/vagrant/.kube/config
+  changed_when: false
+
+# 3. Create Jenkins namespace
+- name: Create Jenkins namespace
+  command: kubectl create namespace {{ jenkins_namespace }}
+  environment:
+    KUBECONFIG: /home/vagrant/.kube/config
+  register: ns_result
+  failed_when:
+    - ns_result.rc != 0
+    - '"already exists" not in ns_result.stderr'
+  changed_when: '"already exists" not in ns_result.stderr'
+
+# 4. Create NFS directory on vm-tools
+- name: Create NFS directory on vm-tools
+  file:
+    path: "{{ nfs_path }}"
+    state: directory
+    owner: "1000"
+    group: "1000"
+    mode: "0755"
+  delegate_to: vm-tools
+  become: true
+
+# 5. Deploy Jenkins persistent volume
+- name: Deploy Jenkis PersistentVolume
+  template:
+    src: jenkins-pv.yml.j2
+    dest: /tmp/jenkins-pv.yml
+
+- name: Apply Jenkins PersistentVolume
+  command: kubectl apply -f /tmp/jenkins-pv.yml
+  environment:
+    KUBECONFIG: /home/vagrant/.kube/config
+
+# 6. Deploy Helm values
+- name: Copy Jenkins Helm values
+  template:
+    src: jenkins-values.yml.j2
+    dest: /tmp/jenkins-values.yml
+
+# 7. Install Jenkins via Helm
+- name: Install Jenkins via Helm
+  command: >
+    helm upgrade --install {{ jenkins_release_name }} jenkins/jenkins
+    --namespace {{ jenkins_namespace }}
+    --values /tmp/jenkins-values.yml
+    --version {{ jenkins_chart_version }}
+    --wait
+    --timeout 10m
+  environment:
+    KUBECONFIG: /home/vagrant/.kube/config
+
+# 8. Wait for Jenkins pod to be running
+- name: Wait for Jenkins pod to be running
+  command: >
+    kubectl get pods -n {{ jenkins_namespace }}
+    -l app.kubernetes.io/name=jenkins
+    --no-headers
+  environment:
+    KUBECONFIG: /home/vagrant/.kube/config
+  register: jenkins_pod
+  until: '"Running" in jenkins_pod.stdout'
+  retries: 30
+  delay: 20
+
+- name: Print Jenkins access info
+  debug:
+    msg:
+      - "Jenkins is ready"
+      - "URL: http://192.168.56.30:{{ jenkins_node_port }}"
+      - "User: {{ jenkins_admin_user }}"
+      - "Password: {{ jenkins_admin_password }}"

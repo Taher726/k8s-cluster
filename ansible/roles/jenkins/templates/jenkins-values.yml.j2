@@ -1,0 +1,50 @@
+controller:
+  admin:
+    username: "{{ jenkins_admin_user }}"      # ← was adminUser
+    password: "{{ jenkins_admin_password }}"  # ← was adminPassword
+
+  serviceType: NodePort
+  nodePort: {{ jenkins_node_port }}
+
+  installPlugins:
+    - kubernetes
+    - workflow-aggregator
+    - git
+    - gitea
+    - docker-workflow
+    - nexus-artifact-uploader
+    - credentials-binding
+    - pipeline-stage-view
+    - blueocean
+
+  resources:
+    requests:
+      cpu: "500m"
+      memory: "512Mi"
+    limits:
+      cpu: "1000m"
+      memory: "1Gi"
+
+  containerEnv:
+    - name: DOCKER_HOST
+      value: "tcp://192.168.56.33:2376"
+
+persistence:
+  enabled: true
+  storageClass: ""
+  accessMode: ReadWriteOnce
+  size: 5Gi
+
+agent:
+  enabled: true
+  namespace: {{ jenkins_namespace }}
+  resources:
+    requests:
+      cpu: "200m"
+      memory: "256Mi"
+    limits:
+      cpu: "500m"
+      memory: "512Mi"
+
+rbac:
+  create: true
