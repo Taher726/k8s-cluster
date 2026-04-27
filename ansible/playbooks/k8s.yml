@@ -47,3 +47,10 @@
           - "nodes_status.stdout | regex_search('k8s-master\\s+Ready')"
         success_msg: "Cluster is healthy"
         fail_msg: "Cluster failed"
+
+- name: Install Jenkins
+  hosts: master
+  become: true
+  roles:
+    - helm
+    - jenkins

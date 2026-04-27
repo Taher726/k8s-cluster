@@ -7,6 +7,16 @@
   apt:
     upgrade: yes
 
+- name: Install required packages
+  apt:
+    name:
+      - curl
+      - apt-transport-https
+      - ca-certificates
+      - gnupg
+      - nfs-common 
+    state: present
+
 # 2. ADD CLUSTER HOSTS TO /etc/hosts
 - name: Remove Vagrant loopback hostname entries
   lineinfile:
@@ -21,3 +31,32 @@
     line: "{{ item.ip }} {{ item.host }}"
     state: present
   loop: "{{ k8s_nodes }}"
+
+# 3. ENABLE IP FORWARDING AND NAT FOR POD NETWORK
+- name: Enable IP forwarding
+  sysctl:
+    name: net.ipv4.ip_forward
+    value: '1'
+    sysctl_set: yes
+    state: present
+    reload: yes
+
+- name: Install iptables-persistent
+  apt:
+    name: iptables-persistent
+    state: present
+  environment:
+    DEBIAN_FRONTEND: noninteractive
+
+- name: Add iptables masquerade rule for pod network
+  iptables:
+    table: nat
+    chain: POSTROUTING
+    source: 10.244.0.0/16
+    destination: "!10.244.0.0/16"
+    jump: MASQUERADE
+    comment: "Masquerade pod traffic to external networks"
+
+- name: Save iptables rules
+  shell: netfilter-persistent save
+  changed_when: false
