@@ -6,3 +6,8 @@
   systemd:
     name: nexus
     state: restarted
+
+- name: restart docker
+  systemd:
+    name: docker
+    state: restarted

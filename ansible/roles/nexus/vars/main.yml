@@ -8,4 +8,11 @@ nexus_working_dir: /opt/sonatype-work
 
 nexus_user: nexus
 nexus_group: nexus
+nexus_host: 192.168.56.33
 nexus_port: 8081
+nexus_docker_port: 8082
+
+nexus_repo_name: "docker-hosted"
+
+nexus_admin_username: "admin"
+nexus_admin_password: "admin1234"

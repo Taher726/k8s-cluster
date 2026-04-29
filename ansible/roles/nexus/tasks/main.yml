@@ -120,3 +120,84 @@
     delay: 10
     timeout: 300
     state: started
+
+# 11. Read generate admin password
+- name: Check if default admin password file exists
+  stat:
+    path: /opt/sonatype-work/nexus3/admin.password
+  register: nexus_password_file
+
+- name: Read Nexus default admin password
+  slurp:
+    src: "{{ nexus_working_dir }}/nexus3/admin.password"
+  register: nexus_default_password_b64
+  when: nexus_password_file.stat.exists
+
+- name: Decode default password
+  set_fact:
+    nexus_default_password: "{{ nexus_default_password_b64.content | b64decode | trim }}"
+  when: nexus_password_file.stat.exists
+
+# 12. Change Nexus admin password via API
+- name: Change Nexus admin password via API
+  uri:
+    url: "http://192.168.56.33:{{ nexus_port }}/service/rest/v1/security/users/admin/change-password"
+    method: PUT
+    user: "{{ nexus_admin_username }}"
+    password: "{{ nexus_default_password }}"
+    force_basic_auth: yes
+    headers:
+      Content-Type: "text/plain"
+    body: "{{ nexus_admin_password }}"
+    status_code: [200, 204]
+  no_log: true
+  when: nexus_password_file.stat.exists
+
+# 13. Enable Docker Bearer Token Realm (It generates a temporary access toekns for docker clients instead of username/password)
+- name: Enable Docker Bearer Tokean Realm
+  uri:
+    url: "http://192.168.56.33:{{ nexus_port }}/service/rest/v1/security/realms/active"
+    method: PUT
+    user: "{{ nexus_admin_username }}"
+    password: "{{ nexus_admin_password }}"
+    force_basic_auth: yes
+    body_format: json
+    body:
+      - "NexusAuthenticatingRealm"
+      - "DockerToken"
+    status_code: [200, 204]
+
+# 14. Create Docker hosted repository (It a private and self-hosted repo, it's used to store images)
+- name: Create Docker hosted repository
+  uri:
+    url: "http://192.168.56.33:{{ nexus_port }}/service/rest/v1/repositories/docker/hosted"
+    method: POST
+    user: "{{ nexus_admin_username }}"
+    password: "{{ nexus_admin_password }}"
+    force_basic_auth: yes
+    body_format: json
+    body:
+      name: "{{ nexus_repo_name }}"
+      online: true
+      storage:
+        blobStoreName: "default"
+        strictContentTypeValidation: true
+        writePolicy: "ALLOW"
+      docker:
+        v1Enabled: true
+        forceBasicAuth: false
+        httpPort: "{{ nexus_docker_port | int }}"
+    status_code: [201, 400]
+  register: repo_creation
+
+- name: Docker repository status
+  debug:
+    msg: "{{ 'Repository already exists' if repo_creation.status == 400 else 'Repository created successfully' }}"
+
+# 15. Configure docker insecure registry on vm-tools
+- name: Configure Docker daemon for insecure registry
+  template:
+    src: daemon.json.j2
+    dest: /etc/docker/daemon.json
+    mode: "0644"
+  notify: restart docker
