@@ -9,3 +9,8 @@ jenkins_admin_user: "admin"
 jenkins_admin_password: "Admin1234!"
 
 jenkins_node_port: 32000
+
+nexus_admin_username: "admin"
+nexus_admin_password: "admin1234"
+nexus_host: 192.168.56.33
+nexus_docker_port: 8082

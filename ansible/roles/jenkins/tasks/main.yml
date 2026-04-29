@@ -23,6 +23,22 @@
     - '"already exists" not in ns_result.stderr'
   changed_when: '"already exists" not in ns_result.stderr'
 
+# 4. Create Nexus imagePullSecret in jenkis namespace
+- name: Create Nexus imagePullSecret in jenkins namespace
+  command: >
+    kubectl create secret docker-registry nexus-pull-secret
+    --docker-server={{ nexus_host }}:{{ nexus_docker_port }}
+    --docker-username={{ nexus_admin_username }}
+    --docker-password={{ nexus_admin_password }}
+    --namespace={{ jenkins_namespace }}
+  environment:
+    KUBECONFIG: /home/vagrant/.kube/config
+  register: secret_result
+  failed_when:
+    - secret_result.rc != 0
+    - '"already exists" not in secret_result.stderr'
+  changed_when: '"already exists" not in secret_result.stderr'
+
 # 4. Create NFS directory on vm-tools
 - name: Create NFS directory on vm-tools
   file:
