@@ -81,6 +81,17 @@
     replace: 'SystemdCgroup = true'
   notify: Restart containerd
 
+- name: Configure containerd insecure registry for Nexus
+  blockinfile:
+    path: /etc/containerd/config.toml
+    block: |
+      [plugins."io.containerd.grpc.v1.cri".registry.mirrors."192.168.56.33:8082"]
+        endpoint = ["http://192.168.56.33:8082"]
+      [plugins."io.containerd.grpc.v1.cri".registry.configs."192.168.56.33:8082".tls]
+        insecure_skip_verify = true
+    marker: "# {mark} ANSIBLE MANAGED - Nexus insecure registry"
+  notify: restart containerd
+
 # 9. ENABLE AND START containerd
 - name: Enable and start containerd
   systemd:
