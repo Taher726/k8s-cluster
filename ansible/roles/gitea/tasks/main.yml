@@ -84,3 +84,39 @@
     - create_admin.rc != 0
     - '"already exists" not in create_admin.stderr'
   changed_when: '"already exists" not in create_admin.stderr'
+
+# 9. Create web-app repository
+- name: Create web-app repository
+  uri:
+    url: "http://127.0.0.1:{{ gitea_http_port }}/api/v1/user/repos"
+    method: POST
+    user: "{{ gitea_admin_user }}"
+    password: "{{ gitea_admin_password }}"
+    force_basic_auth: yes
+    body_format: json
+    body:
+      name: "web-app"
+      description: "3-tier web application"
+      private: false
+      auto_init: true
+      default_branch: master
+    status_code: [201, 409]
+
+# 9. Configure Webhook
+- name: Create Gitea webhook for Jenkins
+  uri:
+    url: "http://127.0.0.1:{{ gitea_http_port }}/api/v1/repos/{{ gitea_admin_user }}/web-app/hooks"
+    method: POST
+    user: "{{ gitea_admin_user }}"
+    password: "{{ gitea_admin_password }}"
+    force_basic_auth: yes
+    body_format: json
+    body:
+      type: "gitea"
+      active: true
+      events:
+        - "push"
+      config:
+        url: "http://{{ jenkins_url }}:{{ jenkins_port }}/gitea-webhook/post"
+        content_type: "json"
+    status_code: [201, 409]

@@ -12,3 +12,6 @@ gitea_admin_email: "admin@local.dev"
 gitea_app_name: "Gitea"
 gitea_db_type: "sqlite3"
 gitea_db_path: "/home/git/gitea/data/gitea.db"
+
+jenkins_url: "192.168.56.30"
+jenkins_port: "32000"
