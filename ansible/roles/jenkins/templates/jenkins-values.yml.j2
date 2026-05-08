@@ -1,4 +1,7 @@
 controller:
+  image:
+    tag: "2.492.3-jdk17"  # Force version compatible with plugins
+
   admin:
     username: "{{ jenkins_admin_user }}"      # ← was adminUser
     password: "{{ jenkins_admin_password }}"  # ← was adminPassword
