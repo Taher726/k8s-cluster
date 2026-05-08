@@ -17,3 +17,12 @@
 - name: Show Helm version
   debug:
     msg: "{{ helm_version.stdout }}"
+
+- name: Add Ingress Controller
+  command: > 
+    helm upgrade --install ingress-nginx ingress-nginx \
+    --repo https://kubernetes.github.io/ingress-nginx \
+    --namespace ingress-nginx \
+    --create-namespace
+  environment:
+    KUBECONFIG: /home/vagrant/.kube/config
